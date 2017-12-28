@@ -1,4 +1,8 @@
-package com.example.kalu.tutorial;
+package com.example.dk.tutorial;
+
+/**
+ * Created by DK on 2017-11-24.
+ */
 
 import android.graphics.Canvas;
 import android.view.SurfaceHolder;
@@ -74,3 +78,4 @@ public class MainThread extends Thread{
         }
     }
 }
+

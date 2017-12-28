@@ -1,4 +1,8 @@
-package com.example.kalu.tutorial;
+package com.example.dk.tutorial;
+
+/**
+ * Created by DK on 2017-11-24.
+ */
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -54,3 +58,4 @@ public class Obstacle implements GameObject{
 
     }
 }
+

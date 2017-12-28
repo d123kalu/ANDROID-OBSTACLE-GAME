@@ -1,4 +1,4 @@
-package com.example.kalu.tutorial;
+package com.example.dk.tutorial;
 
 import org.junit.Test;
 

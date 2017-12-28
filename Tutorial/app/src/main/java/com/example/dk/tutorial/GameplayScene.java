@@ -1,21 +1,18 @@
-package com.example.kalu.tutorial;
+package com.example.dk.tutorial;
 
-import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.view.ActionMode;
 import android.view.MotionEvent;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 
 /**
- * Created by Kalu on 10/25/2017.
+ * Created by DK on 2017-12-21.
  */
 
-public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
-    private MainThread thread;
+public class GameplayScene implements Scene{
     private Rect r = new Rect();
 
     private RectPlayer player;
@@ -25,21 +22,22 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     private boolean movingPlayer = false;
 
     private boolean gameOver = false;
-
     private long gameOverTime;
 
-    public GamePanel(Context context) {
-        super(context);
-        getHolder().addCallback(this);
-        thread = new MainThread(getHolder(), this);
+    private OrientationData orientationData;
+    private long frameTime;
 
+    public GameplayScene()
+    {
         player = new RectPlayer(new Rect(100,100,200,200), Color.rgb(255, 0, 0));
         playerPoint = new Point(Constants.SCREEN_WIDTH/2, 3*Constants.SCREEN_HEIGHT/4);
         player.update(playerPoint);
 
         obstacleManager = new ObstacleManager(200, 350, 75, Color.BLACK);
 
-        setFocusable(true);
+        orientationData = new OrientationData();
+        orientationData.regiter();
+        frameTime = System.currentTimeMillis();
     }
 
     public void reset()
@@ -52,33 +50,13 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+    public void terminate()
+    {
+        SceneManager.ACTIVE_SCENE = 0;
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        thread = new MainThread(getHolder(), this);
-
-        thread.setRunning(true);
-        thread.start();
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        boolean retry = true;
-        while (true) {
-            try {
-                thread.setRunning(false);
-                thread.join();
-            } catch (Exception e) {
-                e.printStackTrace();}
-            retry = false;
-        }
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event){
+    public void recieveTouch(MotionEvent event)
+    {
         switch (event.getAction())
         {
             case MotionEvent.ACTION_DOWN:
@@ -88,6 +66,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
                 {
                     reset();
                     gameOver = false;
+                    orientationData.newGame();
                 }
             case MotionEvent.ACTION_MOVE:
                 if(!gameOver && movingPlayer)
@@ -97,30 +76,10 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
                 movingPlayer = false;
                 break;
         }
-        return true;
-        //return super.onTouchEvent(event);
     }
-
-    public void update()
-    {
-        if(!gameOver)
-        {
-            player.update(playerPoint);
-            obstacleManager.update();
-
-            if(obstacleManager.playerCollide(player))
-            {
-                gameOver = true;
-                gameOverTime = System.currentTimeMillis();
-            }
-        }
-    }
-
     @Override
     public void draw(Canvas canvas)
     {
-        super.draw(canvas);
-
         canvas.drawColor(Color.WHITE);
 
         player.draw(canvas);
@@ -133,7 +92,48 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
             paint.setColor(Color.MAGENTA);
             drawCenterText(canvas, paint, "Game Over");
         }
+    }
 
+    @Override
+    public void update()
+    {
+        if(!gameOver)
+        {
+            if(frameTime < Constants.INIT_TIME)
+                frameTime = Constants.INIT_TIME;
+            int elapsedTime = (int)(System.currentTimeMillis() - frameTime);
+            frameTime =  System.currentTimeMillis();
+            if(orientationData.getOrientation() != null && orientationData.getStartOrientation()!= null)
+            {
+                float pitch = orientationData.getOrientation()[1] - orientationData.getStartOrientation()[1];
+                float roll = orientationData.getOrientation()[2] - orientationData.getStartOrientation()[2];
+
+                float xSpeed = 2 * roll * Constants.SCREEN_WIDTH/1000f;
+                float ySpeed = pitch * Constants.SCREEN_HEIGHT/1000f;
+
+                playerPoint.x += Math.abs(xSpeed*elapsedTime) > 5 ? xSpeed*elapsedTime : 0;
+                playerPoint.y += Math.abs(ySpeed*elapsedTime) > 5 ? ySpeed*elapsedTime : 0;
+            }
+
+            if(playerPoint.x < 0)
+                playerPoint.x = 0;
+            else if (playerPoint.x > Constants.SCREEN_WIDTH)
+                playerPoint.x = Constants.SCREEN_WIDTH;
+
+            if(playerPoint.y < 0)
+                playerPoint.y = 0;
+            else if (playerPoint.y > Constants.SCREEN_HEIGHT)
+                playerPoint.y = Constants.SCREEN_HEIGHT;
+
+            player.update(playerPoint);
+            obstacleManager.update();
+
+            if(obstacleManager.playerCollide(player))
+            {
+                gameOver = true;
+                gameOverTime = System.currentTimeMillis();
+            }
+        }
     }
 
     private void drawCenterText(Canvas canvas, Paint paint, String text)
